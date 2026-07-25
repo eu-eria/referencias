@@ -1,9 +1,25 @@
 # Página autônoma
 
 `index.html` é a plataforma inteira num arquivo só: sem build, sem servidor,
-sem dependência. Abrir o arquivo no navegador já funciona, e ele pode ser
-hospedado em qualquer lugar que sirva um HTML estático (GitHub Pages, Netlify
-Drop, um bucket S3, um pendrive).
+sem dependência. É um documento HTML completo — dá pra abrir com dois cliques
+ou publicar em qualquer lugar que sirva arquivo estático.
+
+## Publicando
+
+Não há passo de build: o arquivo que está aqui é o que vai para o ar.
+
+| Onde | Como |
+| --- | --- |
+| **GitHub Pages** | Copie `index.html` para a raiz do branch publicado e ligue Pages em Settings → Pages |
+| **Netlify / Vercel** | Arraste a pasta `demo/` na área de deploy — ela já é o site |
+| **Cloudflare Pages** | Aponte para `demo/` como diretório de saída, sem comando de build |
+| **S3, nginx, Apache** | Suba o arquivo e sirva como `index.html` |
+| **Sem servidor nenhum** | Abra o arquivo direto do disco: `file://` funciona, inclusive salvando |
+
+O `<head>` já traz charset, viewport, descrição, ícone embutido como data URI,
+`theme-color` para as duas preferências de tema e as tags Open Graph do
+compartilhamento. Um script inline aplica o tema salvo antes da primeira
+pintura, então não há lampejo claro ao abrir no escuro.
 
 Existe para dois usos:
 
@@ -35,3 +51,7 @@ relacionadas — reescritos sem React para caber num arquivo.
 Os "estudos de cor" que aparecem no acervo de exemplo são desenhados no canvas
 quando a página abre pela primeira vez: como capas remotas não carregam, é assim
 que o mural mostra cards de imagem de verdade.
+
+Nada externo é carregado — nenhuma fonte, script ou imagem de outro domínio.
+Isso mantém a página funcionando offline e sobrevivendo a qualquer política de
+segurança de conteúdo restritiva.
