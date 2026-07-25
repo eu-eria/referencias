@@ -11,6 +11,10 @@ celular.
 > A regra que guiou cada decisão de produto aqui: **capturar em 3 segundos,
 > achar em 3 segundos.** Se algo levava mais que isso, virou atalho.
 
+**Quer só olhar?** `demo/index.html` é a plataforma inteira num arquivo só —
+sem build, sem servidor. Abre no navegador e já funciona. Veja
+[demo/README.md](demo/README.md) para o que muda em relação à versão completa.
+
 ---
 
 ## O que dá pra fazer
