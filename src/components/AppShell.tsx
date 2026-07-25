@@ -23,6 +23,7 @@ import { captureImages, captureLinks, extractUrls } from "@/lib/capture";
 import { filterItems, selectionKey, type Selection } from "@/lib/view";
 import { cx, isProbablyUrl } from "@/lib/utils";
 import { isTypingTarget, useDebounced } from "@/lib/hooks";
+import { initSync, syncNow } from "@/lib/sync";
 import { Sidebar } from "./Sidebar";
 import { CaptureBar } from "./CaptureBar";
 import { Toolbar } from "./Toolbar";
@@ -33,6 +34,7 @@ import { BoardDialog } from "./BoardDialog";
 import { SettingsDialog } from "./SettingsDialog";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { EmptyState } from "./EmptyState";
+import { AccountDialog } from "./AccountDialog";
 import { toast } from "./Toast";
 import { ImageIcon, ListIcon, SearchIcon, SparkIcon } from "./Icons";
 
@@ -52,6 +54,7 @@ export function AppShell() {
   const [boardDialog, setBoardDialog] = useState<BoardDialogState>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
 
@@ -60,7 +63,9 @@ export function AppShell() {
   const dragDepth = useRef(0);
 
   useEffect(() => {
-    void loadStore();
+    // O acervo local abre primeiro; a sincronização entra por cima depois,
+    // pra tela nunca esperar a rede pra pintar.
+    void loadStore().then(() => initSync());
   }, []);
 
   useEffect(() => {
@@ -226,7 +231,8 @@ export function AppShell() {
 
       if (isTypingTarget(event.target) || meta || event.altKey) return;
 
-      const anyOverlay = paletteOpen || boardDialog || settingsOpen || shortcutsOpen;
+      const anyOverlay =
+        paletteOpen || boardDialog || settingsOpen || shortcutsOpen || accountOpen;
 
       if (event.key === "Escape") {
         if (detailId) setDetailId(null);
@@ -320,6 +326,7 @@ export function AppShell() {
     boardDialog,
     settingsOpen,
     shortcutsOpen,
+    accountOpen,
     detailId,
     detailItem,
     focusedId,
@@ -445,6 +452,7 @@ export function AppShell() {
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onOpenAccount={() => setAccountOpen(true)}
         onClose={() => setSidebarOpen(false)}
       />
 
@@ -613,11 +621,14 @@ export function AppShell() {
           onChanged={() => {
             setSelection({ type: "todos" });
             setDetailId(null);
+            void syncNow();
           }}
         />
       )}
 
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+
+      {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
 
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-[75] flex items-center justify-center bg-[var(--bg)]/80 backdrop-blur-sm animate-fade-in">

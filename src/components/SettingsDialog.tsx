@@ -75,7 +75,7 @@ export function SettingsDialog({
   return (
     <Modal
       title="Ajustes e backup"
-      description="Seus dados ficam só neste navegador, neste computador."
+      description="Exporte de tempos em tempos — é a sua cópia, fora de qualquer serviço."
       onClose={onClose}
       footer={<Button onClick={onClose}>Fechar</Button>}
     >
@@ -121,7 +121,8 @@ export function SettingsDialog({
         <section>
           <h3 className="text-[13px] font-semibold">Zona de risco</h3>
           <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-            Apaga todas as referências e boards deste navegador. Não dá pra desfazer.
+            Apaga todas as referências e boards deste navegador. Não dá pra desfazer —
+            e, com a sincronização ligada, some também dos seus outros dispositivos.
           </p>
           <div className="mt-3">
             <Button

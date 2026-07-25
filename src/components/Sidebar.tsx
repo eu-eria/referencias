@@ -5,6 +5,7 @@ import type { Board } from "@/lib/types";
 import type { Selection } from "@/lib/view";
 import { selectionKey } from "@/lib/view";
 import { cx } from "@/lib/utils";
+import { SyncButton } from "./AccountDialog";
 import {
   BoardIcon,
   ClockIcon,
@@ -38,6 +39,7 @@ export function Sidebar({
   onToggleTheme,
   onOpenSettings,
   onOpenShortcuts,
+  onOpenAccount,
   onClose,
 }: {
   boards: Board[];
@@ -55,6 +57,7 @@ export function Sidebar({
   onToggleTheme: () => void;
   onOpenSettings: () => void;
   onOpenShortcuts: () => void;
+  onOpenAccount: () => void;
   onClose: () => void;
 }) {
   const [showAllTags, setShowAllTags] = useState(false);
@@ -210,7 +213,11 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="flex items-center gap-1 border-t border-[var(--border)] px-2.5 py-2">
+        <div className="border-t border-[var(--border)] px-2.5 pt-1.5">
+          <SyncButton onClick={onOpenAccount} />
+        </div>
+
+        <div className="flex items-center gap-1 px-2.5 pb-2">
           <FooterButton
             label={theme === "dark" ? "Tema claro" : "Tema escuro"}
             onClick={onToggleTheme}

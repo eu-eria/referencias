@@ -13,6 +13,8 @@ export interface Item {
   imageUrl?: string;
   /** Capa local (upload/print), guardada como Blob no IndexedDB. */
   imageBlob?: Blob;
+  /** Id da mesma imagem no servidor, quando a sincronização está ligada. */
+  imageAssetId?: string;
   /** Proporção da capa (largura/altura), pra reservar espaço antes de carregar. */
   imageRatio?: number;
   siteName?: string;

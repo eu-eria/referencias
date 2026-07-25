@@ -7,6 +7,8 @@ import {
   STORE_SETTINGS,
   clearStore,
   getAll,
+  markDeleted,
+  markPending,
   put,
   putMany,
   remove,
@@ -51,6 +53,14 @@ function setState(patch: Partial<StoreState>) {
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/** Assinatura fora do React — é assim que o motor de sync sabe que algo mudou. */
+export function subscribeStore(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 function getSnapshot(): StoreState {
@@ -164,6 +174,7 @@ export async function createItem(input: NewItem): Promise<Item> {
   };
   setState({ items: [item, ...state.items] });
   await put(STORE_ITEMS, item);
+  await markPending("item", [item.id]);
   return item;
 }
 
@@ -179,6 +190,7 @@ export async function createItems(inputs: NewItem[]): Promise<Item[]> {
   }));
   setState({ items: [...items, ...state.items] });
   await putMany(STORE_ITEMS, items);
+  await markPending("item", items.map((item) => item.id));
   return items;
 }
 
@@ -188,17 +200,20 @@ export async function updateItem(id: string, patch: Partial<Item>): Promise<void
   const next: Item = { ...current, ...patch, id, updatedAt: Date.now() };
   setState({ items: state.items.map((item) => (item.id === id ? next : item)) });
   await put(STORE_ITEMS, next);
+  await markPending("item", [id]);
 }
 
 export async function deleteItem(id: string): Promise<void> {
   setState({ items: state.items.filter((item) => item.id !== id) });
   await remove(STORE_ITEMS, id);
+  await markDeleted("item", [id]);
 }
 
 export async function deleteItems(ids: string[]): Promise<void> {
   const set = new Set(ids);
   setState({ items: state.items.filter((item) => !set.has(item.id)) });
   await removeMany(STORE_ITEMS, ids);
+  await markDeleted("item", ids);
 }
 
 export async function toggleFavorite(id: string): Promise<void> {
@@ -214,6 +229,7 @@ export async function markOpened(id: string): Promise<void> {
   const next: Item = { ...current, openedAt: Date.now() };
   setState({ items: state.items.map((item) => (item.id === id ? next : item)) });
   await put(STORE_ITEMS, next);
+  await markPending("item", [id]);
 }
 
 export async function setItemBoards(ids: string[], boardIds: string[]): Promise<void> {
@@ -228,6 +244,7 @@ export async function setItemBoards(ids: string[], boardIds: string[]): Promise<
   });
   setState({ items });
   await putMany(STORE_ITEMS, updated);
+  await markPending("item", updated.map((item) => item.id));
 }
 
 /** Adiciona um board à seleção sem remover os que já estavam lá. */
@@ -243,6 +260,7 @@ export async function addItemsToBoard(ids: string[], boardId: string): Promise<v
   });
   setState({ items });
   await putMany(STORE_ITEMS, updated);
+  await markPending("item", updated.map((item) => item.id));
 }
 
 export async function addTagToItems(ids: string[], tag: string): Promise<void> {
@@ -257,6 +275,7 @@ export async function addTagToItems(ids: string[], tag: string): Promise<void> {
   });
   setState({ items });
   await putMany(STORE_ITEMS, updated);
+  await markPending("item", updated.map((item) => item.id));
 }
 
 /** Renomeia uma tag em todos os itens de uma vez. */
@@ -272,6 +291,7 @@ export async function renameTag(from: string, to: string): Promise<void> {
   });
   setState({ items });
   await putMany(STORE_ITEMS, updated);
+  await markPending("item", updated.map((item) => item.id));
 }
 
 export async function deleteTag(tag: string): Promise<void> {
@@ -285,6 +305,7 @@ export async function deleteTag(tag: string): Promise<void> {
   });
   setState({ items });
   await putMany(STORE_ITEMS, updated);
+  await markPending("item", updated.map((item) => item.id));
 }
 
 /* ───────────────────────────────── boards ────────────────────────────────── */
@@ -303,6 +324,7 @@ export async function createBoard(input: NewBoard): Promise<Board> {
   };
   setState({ boards: sortBoards([...state.boards, board]) });
   await put(STORE_BOARDS, board);
+  await markPending("board", [board.id]);
   return board;
 }
 
@@ -314,6 +336,7 @@ export async function updateBoard(id: string, patch: Partial<Board>): Promise<vo
     boards: sortBoards(state.boards.map((board) => (board.id === id ? next : board))),
   });
   await put(STORE_BOARDS, next);
+  await markPending("board", [id]);
 }
 
 /** Apaga o board e desvincula os itens — as referências continuam existindo. */
@@ -334,6 +357,8 @@ export async function deleteBoard(id: string): Promise<void> {
   setState({ boards: state.boards.filter((board) => board.id !== id), items });
   await remove(STORE_BOARDS, id);
   await putMany(STORE_ITEMS, touched);
+  await markDeleted("board", [id]);
+  await markPending("item", touched.map((item) => item.id));
 }
 
 export async function reorderBoards(orderedIds: string[]): Promise<void> {
@@ -344,6 +369,7 @@ export async function reorderBoards(orderedIds: string[]): Promise<void> {
   }));
   setState({ boards: sortBoards(boards) });
   await putMany(STORE_BOARDS, boards);
+  await markPending("board", boards.map((board) => board.id));
 }
 
 /* ────────────────────────────── preferências ─────────────────────────────── */
@@ -429,6 +455,8 @@ export async function importBackup(file: File): Promise<ImportResult> {
 
   await putMany(STORE_BOARDS, boards);
   await putMany(STORE_ITEMS, items);
+  await markPending("board", boards.map((board) => board.id));
+  await markPending("item", items.map((item) => item.id));
 
   const boardMap = new Map(state.boards.map((board) => [board.id, board]));
   boards.forEach((board) => boardMap.set(board.id, board));
@@ -443,9 +471,112 @@ export async function importBackup(file: File): Promise<ImportResult> {
   return { boards: boards.length, items: items.length };
 }
 
+/**
+ * Apaga tudo. Com a sincronização ligada isso vira exclusão de verdade e
+ * chega aos outros dispositivos — por isso o diálogo avisa antes.
+ */
 export async function resetAll(): Promise<void> {
+  const itemIds = state.items.map((item) => item.id);
+  const boardIds = state.boards.map((board) => board.id);
+
   await Promise.all([clearStore(STORE_ITEMS), clearStore(STORE_BOARDS)]);
   setState({ items: [], boards: [] });
+
+  await markDeleted("item", itemIds);
+  await markDeleted("board", boardIds);
+}
+
+/* ─────────────────────── ponte com a sincronização ───────────────────────── */
+
+/**
+ * Grava o que veio do servidor. Diferente das mutações normais, aqui NÃO se
+ * marca nada como pendente — senão o cliente devolveria de volta o que acabou
+ * de receber, num vai-e-vem infinito.
+ */
+export async function applyRemote(input: {
+  boards: Board[];
+  items: Item[];
+  deletions: { kind: "item" | "board"; id: string; deletedAt: number }[];
+}): Promise<void> {
+  const boardMap = new Map(state.boards.map((board) => [board.id, board]));
+  const itemMap = new Map(state.items.map((item) => [item.id, item]));
+
+  const writtenBoards: Board[] = [];
+  const writtenItems: Item[] = [];
+  const removedBoardIds: string[] = [];
+  const removedItemIds: string[] = [];
+
+  for (const board of input.boards) {
+    const existing = boardMap.get(board.id);
+    // O local pode ter ficado mais novo depois que o push saiu; nesse caso ele
+    // continua pendente e vai ganhar na próxima rodada.
+    if (existing && existing.updatedAt > board.updatedAt) continue;
+    boardMap.set(board.id, board);
+    writtenBoards.push(board);
+  }
+
+  for (const item of input.items) {
+    const existing = itemMap.get(item.id);
+    if (existing && existing.updatedAt > item.updatedAt) continue;
+    // A imagem não trafega no payload de sync: sobrescrever o item inteiro
+    // apagaria a capa que já está no banco local.
+    const merged: Item = { ...item, imageBlob: item.imageBlob ?? existing?.imageBlob };
+    itemMap.set(item.id, merged);
+    writtenItems.push(merged);
+  }
+
+  for (const tombstone of input.deletions) {
+    if (tombstone.kind === "board") {
+      const existing = boardMap.get(tombstone.id);
+      if (existing && existing.updatedAt > tombstone.deletedAt) continue;
+      if (!existing) continue;
+      boardMap.delete(tombstone.id);
+      removedBoardIds.push(tombstone.id);
+    } else {
+      const existing = itemMap.get(tombstone.id);
+      if (existing && existing.updatedAt > tombstone.deletedAt) continue;
+      if (!existing) continue;
+      itemMap.delete(tombstone.id);
+      removedItemIds.push(tombstone.id);
+    }
+  }
+
+  // Pull vazio (o caso comum) não pode emitir: cada emissão acorda o motor de
+  // sync, e um sync que se acorda sozinho vira laço infinito.
+  const changed =
+    writtenBoards.length + writtenItems.length + removedBoardIds.length + removedItemIds.length;
+  if (changed === 0) return;
+
+  setState({
+    boards: sortBoards(Array.from(boardMap.values())),
+    items: Array.from(itemMap.values()),
+  });
+
+  await putMany(STORE_BOARDS, writtenBoards);
+  await putMany(STORE_ITEMS, writtenItems);
+  await removeMany(STORE_BOARDS, removedBoardIds);
+  await removeMany(STORE_ITEMS, removedItemIds);
+}
+
+/** Grava um item sem enfileirar envio — usado ao anexar a imagem baixada. */
+export async function applyRemoteItem(item: Item): Promise<void> {
+  setState({
+    items: state.items.map((current) => (current.id === item.id ? item : current)),
+  });
+  await put(STORE_ITEMS, item);
+}
+
+/**
+ * Enfileira todo o acervo local pra envio. Roda no primeiro login de um
+ * dispositivo: o que já estava aqui sobe pra conta em vez de ficar órfão.
+ */
+export async function markEverythingPending(): Promise<void> {
+  await markPending("board", state.boards.map((board) => board.id));
+  await markPending("item", state.items.map((item) => item.id));
+}
+
+export function getState(): StoreState {
+  return state;
 }
 
 /* ─────────────────────────────── seletores ───────────────────────────────── */
