@@ -1,0 +1,98 @@
+name: Publicar no GitHub Pages
+
+# Publica a pasta `demo/` — a versão da plataforma que roda inteira no
+# navegador. Não há passo de build: o arquivo do repositório é o que vai ao ar.
+#
+# Antes do primeiro deploy, ligue Pages em Settings → Pages → Source:
+# "GitHub Actions". Sem isso o job de deploy falha dizendo que Pages não está
+# habilitado.
+
+on:
+  push:
+    # Roda em qualquer branch, mas o job só publica a partir da branch padrão
+    # (a checagem está no `if` abaixo). Assim o nome da branch padrão pode
+    # mudar sem precisar editar este arquivo.
+    branches: ["**"]
+    paths:
+      - "demo/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Um deploy de cada vez, sem cancelar o que já está no ar pela metade.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  montar:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Montar o site
+        run: |
+          mkdir -p _site
+          cp demo/index.html _site/index.html
+          cp demo/social-card.png _site/social-card.png
+          # Qualquer caminho inexistente cai no próprio app, em vez do 404 do
+          # GitHub — a plataforma é uma página só.
+          cp demo/index.html _site/404.html
+          # Sem isto o Jekyll ignoraria arquivos começando com _ ou ponto.
+          touch _site/.nojekyll
+
+      - name: Conferir a página
+        run: |
+          test -s _site/index.html
+          grep -q '<!doctype html>' _site/index.html
+          grep -q '<meta charset="utf-8">' _site/index.html
+          grep -q 'name="viewport"' _site/index.html
+          grep -q 'id="capture-input"' _site/index.html
+
+          # A página tem de ser autossuficiente: nada de fonte, script ou
+          # imagem vindos de outro domínio, senão ela quebra offline e sob
+          # políticas de segurança restritivas.
+          #
+          # Só o que o navegador realmente busca conta. URL absoluta em
+          # canonical e og:* é metadado — precisa ser absoluta, e passa.
+          externo=$(
+            {
+              grep -oE 'src="https?://[^"]+"' _site/index.html || true
+              grep -oE '<link[^>]+rel="(stylesheet|preload|prefetch|icon|apple-touch-icon|manifest)"[^>]*href="https?://[^"]+"' _site/index.html || true
+              grep -oE '@import[^;]*https?://' _site/index.html || true
+              grep -oE 'url\(\s*["'"'"']?https?://' _site/index.html || true
+            }
+          )
+          if [ -n "$externo" ]; then
+            echo "$externo"
+            echo "::error file=demo/index.html::A página carrega um recurso externo"
+            exit 1
+          fi
+
+          echo "Página validada — $(wc -c < _site/index.html) bytes, nada externo"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    needs: montar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Onde ficou
+        run: echo "No ar em ${{ steps.deploy.outputs.page_url }}"

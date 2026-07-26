@@ -11,9 +11,12 @@ celular.
 > A regra que guiou cada decisão de produto aqui: **capturar em 3 segundos,
 > achar em 3 segundos.** Se algo levava mais que isso, virou atalho.
 
-**Quer só olhar?** `demo/index.html` é a plataforma inteira num arquivo só —
-sem build, sem servidor. Abre no navegador e já funciona. Veja
-[demo/README.md](demo/README.md) para o que muda em relação à versão completa.
+**Quer só olhar?** → **https://produtosauvp.github.io/teste_ref/**
+
+É a plataforma inteira num arquivo (`demo/index.html`), publicada no GitHub
+Pages a cada push na branch padrão. Sem build, sem servidor: abre e funciona.
+Veja [demo/README.md](demo/README.md) para ligar o Pages e para o que muda em
+relação à versão completa.
 
 ---
 
