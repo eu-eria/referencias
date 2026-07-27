@@ -1,26 +1,26 @@
-# Página autônoma — o que vai para o GitHub Pages
+# A página publicada
 
-`index.html` é a plataforma inteira num arquivo: sem build, sem servidor, sem
-dependência. É um documento HTML completo, então dá pra abrir com dois cliques
-ou servir como site estático.
-
-O workflow [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
-publica esta pasta no GitHub Pages a cada push na branch padrão.
+`index.html`, na raiz do repositório, é a plataforma inteira num arquivo: sem
+build, sem servidor, sem dependência. É um documento HTML completo, então dá
+pra abrir com dois cliques ou servir como site estático.
 
 **No ar em:** https://produtosauvp.github.io/teste_ref/
 
-## Ligando o Pages (uma vez só)
+## Por que na raiz
 
-O GitHub não habilita Pages sozinho. Uma vez feito isso, nunca mais precisa
-mexer:
+O GitHub Pages tem dois modos, e o arquivo na raiz faz os dois funcionarem:
 
-1. No repositório, vá em **Settings → Pages**.
-2. Em **Source**, escolha **GitHub Actions** (não "Deploy from a branch").
-3. Pronto. O próximo push na branch padrão publica; ou rode o workflow à mão em
-   **Actions → Publicar no GitHub Pages → Run workflow**.
+| Modo | O que acontece |
+| --- | --- |
+| **Deploy from a branch** (raiz) | O Pages serve a raiz da branch direto. Como existe `index.html`, é ele que abre. Sem workflow nenhum. |
+| **GitHub Actions** | O workflow [`pages.yml`](../.github/workflows/pages.yml) monta e publica, validando a página antes. |
 
-Só a branch padrão vai ao ar. O workflow roda em qualquer branch para validar a
-página, mas o passo de publicação é guardado por
+O `.nojekyll` na raiz é o detalhe que evita a armadilha clássica: sem ele, o
+Pages roda o Jekyll, que **renderiza o `README.md` como se fosse a home** e a
+plataforma nunca aparece.
+
+Só a branch padrão vai ao ar. No modo Actions, o workflow roda em qualquer
+branch para validar a página, mas o passo de publicação é guardado por
 `github.ref_name == github.event.repository.default_branch` — assim o nome da
 branch padrão pode mudar sem precisar editar o arquivo.
 
@@ -32,7 +32,7 @@ workflow só monta a pasta e confere:
 - copia `index.html` e `social-card.png`;
 - copia `index.html` também como `404.html` — a plataforma é uma página só, então
   qualquer caminho errado cai no app em vez do 404 do GitHub;
-- cria `.nojekyll`, senão o Jekyll ignoraria arquivos que começam com `_` ou `.`;
+- cria `.nojekyll`;
 - confere que o documento está inteiro (doctype, charset, viewport, o app);
 - **falha se a página passar a carregar qualquer coisa de outro domínio.** É a
   garantia de que ela continua funcionando offline e sob política de segurança
@@ -52,8 +52,8 @@ Sem Pages, o arquivo continua sendo só um arquivo:
 
 | Onde | Como |
 | --- | --- |
-| **Netlify / Vercel** | Arraste a pasta `demo/` na área de deploy — ela já é o site |
-| **Cloudflare Pages** | Aponte para `demo/`, sem comando de build |
+| **Netlify / Vercel** | Arraste o `index.html` na área de deploy |
+| **Cloudflare Pages** | Aponte para a raiz, sem comando de build |
 | **S3, nginx, Apache** | Suba e sirva como `index.html` |
 | **Sem servidor nenhum** | Abra direto do disco: `file://` funciona, inclusive salvando |
 

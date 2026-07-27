@@ -13,10 +13,10 @@ celular.
 
 **Quer só olhar?** → **https://produtosauvp.github.io/teste_ref/**
 
-É a plataforma inteira num arquivo (`demo/index.html`), publicada no GitHub
-Pages a cada push na branch padrão. Sem build, sem servidor: abre e funciona.
-Veja [demo/README.md](demo/README.md) para ligar o Pages e para o que muda em
-relação à versão completa.
+É a plataforma inteira num arquivo (`index.html`, na raiz), publicada no GitHub
+Pages. Sem build, sem servidor: abre e funciona. Veja
+[docs/pagina-publicada.md](docs/pagina-publicada.md) para como ela é publicada e
+o que muda em relação à versão completa.
 
 ---
 

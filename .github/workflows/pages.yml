@@ -1,20 +1,23 @@
 name: Publicar no GitHub Pages
 
-# Publica a pasta `demo/` — a versão da plataforma que roda inteira no
-# navegador. Não há passo de build: o arquivo do repositório é o que vai ao ar.
+# A página publicada é o `index.html` da raiz — a plataforma inteira num
+# arquivo, rodando no navegador.
 #
-# Antes do primeiro deploy, ligue Pages em Settings → Pages → Source:
-# "GitHub Actions". Sem isso o job de deploy falha dizendo que Pages não está
-# habilitado.
+# Ela fica na raiz de propósito: assim o Pages funciona tanto no modo
+# "Deploy from a branch" (que serve a raiz do branch direto, sem workflow
+# nenhum) quanto no modo "GitHub Actions", que é o que este arquivo faz.
+# Qualquer um dos dois publica a mesma coisa.
 
 on:
   push:
-    # Roda em qualquer branch, mas o job só publica a partir da branch padrão
-    # (a checagem está no `if` abaixo). Assim o nome da branch padrão pode
-    # mudar sem precisar editar este arquivo.
+    # Roda em qualquer branch, mas só publica a partir da branch padrão — a
+    # checagem está no `if` do job. Assim o nome da branch padrão pode mudar
+    # sem precisar editar este arquivo.
     branches: ["**"]
     paths:
-      - "demo/**"
+      - "index.html"
+      - "social-card.png"
+      - ".nojekyll"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -23,7 +26,7 @@ permissions:
   pages: write
   id-token: write
 
-# Um deploy de cada vez, sem cancelar o que já está no ar pela metade.
+# Um deploy de cada vez, sem cancelar o que já está subindo.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -40,12 +43,13 @@ jobs:
       - name: Montar o site
         run: |
           mkdir -p _site
-          cp demo/index.html _site/index.html
-          cp demo/social-card.png _site/social-card.png
-          # Qualquer caminho inexistente cai no próprio app, em vez do 404 do
-          # GitHub — a plataforma é uma página só.
-          cp demo/index.html _site/404.html
-          # Sem isto o Jekyll ignoraria arquivos começando com _ ou ponto.
+          cp index.html _site/index.html
+          cp social-card.png _site/social-card.png
+          # A plataforma é uma página só: qualquer caminho inexistente cai no
+          # próprio app, em vez do 404 do GitHub.
+          cp index.html _site/404.html
+          # Sem isto o Jekyll entraria no caminho e renderizaria o README no
+          # lugar do app.
           touch _site/.nojekyll
 
       - name: Conferir a página
@@ -72,7 +76,7 @@ jobs:
           )
           if [ -n "$externo" ]; then
             echo "$externo"
-            echo "::error file=demo/index.html::A página carrega um recurso externo"
+            echo "::error file=index.html::A página carrega um recurso externo"
             exit 1
           fi
 
