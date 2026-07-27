@@ -8,26 +8,22 @@ pra abrir com dois cliques ou servir como site estático.
 
 ## Por que na raiz
 
-O GitHub Pages tem dois modos, e o arquivo na raiz faz os dois funcionarem:
+O GitHub Pages tem dois modos. O arquivo na raiz faz o mais simples deles
+funcionar sem configuração nenhuma:
 
 | Modo | O que acontece |
 | --- | --- |
-| **Deploy from a branch** (raiz) | O Pages serve a raiz da branch direto. Como existe `index.html`, é ele que abre. Sem workflow nenhum. |
-| **GitHub Actions** | O workflow [`pages.yml`](../.github/workflows/pages.yml) monta e publica, validando a página antes. |
+| **Deploy from a branch** (raiz) — em uso | O Pages serve a raiz da branch padrão direto. Como existe `index.html`, é ele que abre. Nenhum workflow envolvido. |
+| **GitHub Actions** | O workflow [`pages.yml`](../.github/workflows/pages.yml) monta e publica. Desligado por padrão; ligue criando a variável `PAGES_VIA_ACTIONS = true` em Settings → Secrets and variables → Actions → Variables. |
 
-O `.nojekyll` na raiz é o detalhe que evita a armadilha clássica: sem ele, o
-Pages roda o Jekyll, que **renderiza o `README.md` como se fosse a home** e a
-plataforma nunca aparece.
-
-Só a branch padrão vai ao ar. No modo Actions, o workflow roda em qualquer
-branch para validar a página, mas o passo de publicação é guardado por
-`github.ref_name == github.event.repository.default_branch` — assim o nome da
-branch padrão pode mudar sem precisar editar o arquivo.
+O `.nojekyll` na raiz é o detalhe que evita a armadilha clássica — e que já
+mordeu uma vez aqui: sem ele, o Pages roda o Jekyll, que **renderiza o
+`README.md` como se fosse a home** e a plataforma nunca aparece.
 
 ## O que o workflow faz
 
-Não há compilação: o arquivo do repositório é literalmente o que vai ao ar. O
-workflow só monta a pasta e confere:
+Ele não publica por padrão: serve de rede de proteção. A cada push que toca a
+página, ele monta a pasta e confere que nada quebrou:
 
 - copia `index.html` e `social-card.png`;
 - copia `index.html` também como `404.html` — a plataforma é uma página só, então

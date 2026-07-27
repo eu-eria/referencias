@@ -1,24 +1,36 @@
-name: Publicar no GitHub Pages
+name: Página publicada
 
 # A página publicada é o `index.html` da raiz — a plataforma inteira num
 # arquivo, rodando no navegador.
 #
-# Ela fica na raiz de propósito: assim o Pages funciona tanto no modo
-# "Deploy from a branch" (que serve a raiz do branch direto, sem workflow
-# nenhum) quanto no modo "GitHub Actions", que é o que este arquivo faz.
-# Qualquer um dos dois publica a mesma coisa.
+# Ela fica na raiz de propósito: assim o GitHub Pages funciona no modo
+# "Deploy from a branch", que serve a raiz da branch padrão direto, sem
+# workflow nenhum. É o modo mais simples e é o que está em uso.
+#
+# Este arquivo, então, faz duas coisas:
+#
+#  1. `validar` — roda sempre e confere que a página continua inteira e
+#     autossuficiente. É a rede de proteção contra um commit que quebre o que
+#     já está no ar.
+#
+#  2. `publicar` — só entra em ação se você trocar Settings → Pages → Source
+#     para "GitHub Actions". Fica desligado por padrão porque, no modo
+#     "Deploy from a branch", o passo de deploy falharia e encheria o
+#     histórico de execuções vermelhas sem motivo.
+#     Para ligar: Settings → Secrets and variables → Actions → Variables →
+#     nova variável `PAGES_VIA_ACTIONS` com valor `true`.
 
 on:
   push:
-    # Roda em qualquer branch, mas só publica a partir da branch padrão — a
-    # checagem está no `if` do job. Assim o nome da branch padrão pode mudar
-    # sem precisar editar este arquivo.
-    branches: ["**"]
     paths:
       - "index.html"
       - "social-card.png"
       - ".nojekyll"
       - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "social-card.png"
   workflow_dispatch:
 
 permissions:
@@ -26,16 +38,13 @@ permissions:
   pages: write
   id-token: write
 
-# Um deploy de cada vez, sem cancelar o que já está subindo.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  montar:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.ref_name == github.event.repository.default_branch
+  validar:
+    name: Conferir a página
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,8 +57,8 @@ jobs:
           # A plataforma é uma página só: qualquer caminho inexistente cai no
           # próprio app, em vez do 404 do GitHub.
           cp index.html _site/404.html
-          # Sem isto o Jekyll entraria no caminho e renderizaria o README no
-          # lugar do app.
+          # Sem isto o Jekyll entra no caminho e renderiza o README no lugar
+          # do app — foi exatamente o que aconteceu na primeira publicação.
           touch _site/.nojekyll
 
       - name: Conferir a página
@@ -82,21 +91,28 @@ jobs:
 
           echo "Página validada — $(wc -c < _site/index.html) bytes, nada externo"
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: Guardar o site montado
+        if: vars.PAGES_VIA_ACTIONS == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   publicar:
-    needs: montar
+    name: Publicar no Pages
+    needs: validar
+    # Desligado por padrão. Só faz sentido com Settings → Pages → Source em
+    # "GitHub Actions"; no modo "Deploy from a branch" este passo falharia.
+    if: >-
+      vars.PAGES_VIA_ACTIONS == 'true' &&
+      github.event_name != 'pull_request' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.ref_name == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/configure-pages@v5
       - id: deploy
         uses: actions/deploy-pages@v4
-
-      - name: Onde ficou
-        run: echo "No ar em ${{ steps.deploy.outputs.page_url }}"
+      - run: echo "No ar em ${{ steps.deploy.outputs.page_url }}"
