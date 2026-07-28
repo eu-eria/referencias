@@ -1,4 +1,4 @@
-export type ItemKind = "link" | "image" | "note";
+export type ItemKind = "link" | "image" | "note" | "palette";
 
 /** Uma referência salva: um link, uma imagem ou uma nota solta. */
 export interface Item {
@@ -23,6 +23,8 @@ export interface Item {
   accentColor?: string;
   boardIds: string[];
   tags: string[];
+  /** Só em `palette`: as cores, em "#rrggbb" minúsculo. */
+  colors?: string[];
   /** Anotações próprias, separadas da descrição que veio do site. */
   notes?: string;
   favorite: boolean;

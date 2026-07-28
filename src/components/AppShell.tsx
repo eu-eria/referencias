@@ -19,7 +19,13 @@ import {
   useStore,
   useTagCounts,
 } from "@/lib/store";
-import { captureImages, captureLinks, extractUrls } from "@/lib/capture";
+import {
+  captureImages,
+  captureLinks,
+  capturePalette,
+  extractUrls,
+  readPalette,
+} from "@/lib/capture";
 import { filterItems, selectionKey, type Selection } from "@/lib/view";
 import { cx, isProbablyUrl } from "@/lib/utils";
 import { isTypingTarget, useDebounced } from "@/lib/hooks";
@@ -366,7 +372,25 @@ export function AppShell() {
       }
 
       const text = event.clipboardData?.getData("text/plain")?.trim();
-      if (!text || !isProbablyUrl(text)) return;
+      if (!text) return;
+
+      const palette = readPalette(text);
+      if (palette) {
+        event.preventDefault();
+        try {
+          const saved = await capturePalette(palette, targetBoardIds);
+          setFocusedId(saved.id);
+          toast(
+            palette.length === 1 ? "Cor salva" : `Paleta de ${palette.length} cores salva`,
+            { tone: "success" },
+          );
+        } catch {
+          toast("Não consegui salvar essas cores", { tone: "error" });
+        }
+        return;
+      }
+
+      if (!isProbablyUrl(text)) return;
 
       event.preventDefault();
       try {

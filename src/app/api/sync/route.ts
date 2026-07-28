@@ -144,9 +144,9 @@ async function writeItem(db: Db, userId: string, item: SyncItem, revision: numbe
     `INSERT INTO items
        (user_id, id, kind, title, url, description, image_url, image_asset_id,
         image_ratio, site_name, favicon_url, accent_color, board_ids, tags,
-        notes, favorite, created_at, updated_at, opened_at, deleted_at, revision)
+        colors, notes, favorite, created_at, updated_at, opened_at, deleted_at, revision)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-             $15, $16, $17, $18, $19, NULL, $20)
+             $15, $16, $17, $18, $19, $20, NULL, $21)
      ON CONFLICT (user_id, id) DO UPDATE SET
        kind = EXCLUDED.kind,
        title = EXCLUDED.title,
@@ -160,6 +160,7 @@ async function writeItem(db: Db, userId: string, item: SyncItem, revision: numbe
        accent_color = EXCLUDED.accent_color,
        board_ids = EXCLUDED.board_ids,
        tags = EXCLUDED.tags,
+       colors = EXCLUDED.colors,
        notes = EXCLUDED.notes,
        favorite = EXCLUDED.favorite,
        created_at = EXCLUDED.created_at,
@@ -182,6 +183,7 @@ async function writeItem(db: Db, userId: string, item: SyncItem, revision: numbe
       optionalText(item.accentColor, 32),
       JSON.stringify(stringList(item.boardIds, 64)),
       JSON.stringify(stringList(item.tags, 64)),
+      JSON.stringify(stringList(item.colors ?? [], 16)),
       optionalText(item.notes, 20_000),
       Boolean(item.favorite),
       timestamp(item.createdAt),
@@ -226,9 +228,9 @@ async function writeTombstone(
       );
     } else {
       await db.execute(
-        `INSERT INTO items (user_id, id, kind, title, board_ids, tags, favorite,
+        `INSERT INTO items (user_id, id, kind, title, board_ids, tags, colors, favorite,
                             created_at, updated_at, deleted_at, revision)
-         VALUES ($1, $2, 'link', '', '[]', '[]', false, $3, $3, $3, $4)
+         VALUES ($1, $2, 'link', '', '[]', '[]', '[]', false, $3, $3, $3, $4)
          ON CONFLICT (user_id, id) DO NOTHING`,
         [userId, tombstone.id, timestamp(tombstone.deletedAt), revision],
       );
@@ -256,7 +258,7 @@ async function writeTombstone(
   await db.execute(
     `UPDATE items
         SET deleted_at = $1, updated_at = $1, revision = $2,
-            description = NULL, notes = NULL, image_asset_id = NULL
+            description = NULL, notes = NULL, image_asset_id = NULL, colors = '[]'
       WHERE user_id = $3 AND id = $4`,
     [timestamp(tombstone.deletedAt), revision, userId, tombstone.id],
   );
@@ -335,6 +337,7 @@ interface ItemRow {
   accent_color: string | null;
   board_ids: string;
   tags: string;
+  colors: string | null;
   notes: string | null;
   favorite: boolean | number;
   created_at: number | string;
@@ -356,10 +359,14 @@ function toBoard(row: BoardRow): SyncBoard {
   };
 }
 
+const KNOWN_KINDS = new Set<string>(["link", "image", "note", "palette"]);
+
 function toItem(row: ItemRow): SyncItem {
   return {
     id: row.id,
-    kind: (row.kind === "image" || row.kind === "note" ? row.kind : "link") as SyncItem["kind"],
+    // Lista fechada de tipos conhecidos, com "link" como último recurso. Um
+    // tipo novo tem de entrar aqui, senão volta do servidor descaracterizado.
+    kind: (KNOWN_KINDS.has(row.kind) ? row.kind : "link") as SyncItem["kind"],
     title: row.title,
     url: row.url ?? undefined,
     description: row.description ?? undefined,
@@ -371,6 +378,7 @@ function toItem(row: ItemRow): SyncItem {
     accentColor: row.accent_color ?? undefined,
     boardIds: parseList(row.board_ids),
     tags: parseList(row.tags),
+    colors: row.colors ? parseList(row.colors) : undefined,
     notes: row.notes ?? undefined,
     favorite: Boolean(row.favorite),
     createdAt: Number(row.created_at),

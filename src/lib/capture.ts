@@ -2,6 +2,7 @@
 
 import type { Metadata } from "@/app/api/metadata/route";
 import { suggestTags } from "./autotag";
+import { paletteTitle, parsePalette } from "./color";
 import { createItem, createItems, type NewItem } from "./store";
 import type { Item } from "./types";
 import { compressImage, faviconFor, hostOf, normalizeUrl } from "./utils";
@@ -96,6 +97,29 @@ export async function captureLinks(
   );
 
   return createItems(drafts);
+}
+
+/**
+ * Um punhado de hexadecimais vira paleta. `parsePalette` só aceita texto que
+ * seja *só* cor, então uma nota comum nunca cai aqui por engano.
+ */
+export async function capturePalette(
+  colors: string[],
+  boardIds: string[],
+): Promise<Item> {
+  if (colors.length === 0) throw new Error("Nenhuma cor reconhecida");
+  return createItem({
+    kind: "palette",
+    title: paletteTitle(colors),
+    colors,
+    boardIds,
+    tags: ["cor", "paleta"],
+  });
+}
+
+/** Devolve as cores se o texto for uma paleta, ou null. */
+export function readPalette(text: string): string[] | null {
+  return parsePalette(text);
 }
 
 export async function captureNote(text: string, boardIds: string[]): Promise<Item> {

@@ -63,10 +63,15 @@ Sem servidor, duas coisas ficam de fora — e a própria página explica isso em
   O card já nasce editável.
 - **Sincronização entre dispositivos**, que depende de conta e banco.
 
-Todo o resto é igual: captura de links, notas e imagens, boards, tags
-automáticas, busca ⌘K, anotações, referências relacionadas, três visões,
-atalhos de teclado, tema claro/escuro e backup em JSON. O formato do backup é o
-mesmo do app completo, então um export daqui importa lá e vice-versa.
+Todo o resto é igual: captura de links, notas, imagens e **paletas de cor**,
+boards, tags automáticas, busca ⌘K, anotações, referências relacionadas, três
+visões, atalhos de teclado, tema claro/escuro e backup em JSON. O formato do
+backup é o mesmo do app completo, então um export daqui importa lá e vice-versa.
+
+A **capa dos cards de site** é gerada aqui: uma placa com o domínio real, no tom
+derivado dele. Não é foto da página — sem servidor o navegador não consegue
+buscar a `og:image` de outro domínio. Na versão completa, quando o site publica
+uma, é ela que aparece.
 
 ## Como está construído
 

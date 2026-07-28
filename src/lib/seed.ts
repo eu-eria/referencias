@@ -139,6 +139,19 @@ const LINK_SEED: SeedLink[] = [
   },
 ];
 
+const PALETTE_SEED: { title: string; colors: string[]; board: string }[] = [
+  {
+    title: "Paleta desta plataforma",
+    colors: ["#0b0b0d", "#17171b", "#d97757", "#f2f2f3", "#9b9ba5"],
+    board: "Tipografia & cor",
+  },
+  {
+    title: "Paleta azul e coral",
+    colors: ["#1d3557", "#457b9d", "#a8dadc", "#f1faee", "#e63946"],
+    board: "Tipografia & cor",
+  },
+];
+
 const NOTE_SEED: { title: string; body: string; tags: string[]; board: string }[] = [
   {
     title: "Como eu quero usar esse espaço",
@@ -189,6 +202,22 @@ export function buildSeed(): { boards: Board[]; items: Item[] } {
       boardIds: boardId ? [boardId] : [],
       tags: link.tags,
       favorite: index < 2,
+      createdAt,
+      updatedAt: createdAt,
+    });
+  });
+
+  PALETTE_SEED.forEach((palette, index) => {
+    const createdAt = now - (index + 1) * hour * 7;
+    const boardId = boardIdByName.get(palette.board);
+    items.push({
+      id: `seed-palette-${index + 1}`,
+      kind: "palette",
+      title: palette.title,
+      colors: palette.colors,
+      boardIds: boardId ? [boardId] : [],
+      tags: ["cor", "paleta"],
+      favorite: false,
       createdAt,
       updatedAt: createdAt,
     });

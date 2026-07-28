@@ -1,4 +1,5 @@
 import type { Board, Item } from "./types";
+import { colorName } from "./color";
 import { deaccent, hostOf } from "./utils";
 
 /**
@@ -91,6 +92,15 @@ export function searchItems(items: Item[], query: string): ScoredItem[] {
     if (item.siteName) {
       const siteMatch = fuzzyMatch(trimmed, item.siteName);
       if (siteMatch) score = Math.max(score, siteMatch.score * 1.5);
+    }
+
+    // Paleta é procurada pelo próprio hexadecimal e pelo nome da cor.
+    for (const color of item.colors ?? []) {
+      if (color.includes(deaccent(trimmed).replace(/^#?/, "#"))) {
+        score = Math.max(score, 110);
+      }
+      const named = fuzzyMatch(trimmed, colorName(color));
+      if (named) score = Math.max(score, named.score * 1.6);
     }
 
     // Textos longos só contam por substring — fuzzy neles gera muito ruído.

@@ -98,6 +98,7 @@ export const KIND_LABELS: Record<ItemKind, string> = {
   link: "Links",
   image: "Imagens",
   note: "Notas",
+  palette: "Paletas",
 };
 
 /**

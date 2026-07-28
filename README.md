@@ -29,6 +29,10 @@ o que muda em relação à versão completa.
 - Cole várias URLs de uma vez (uma por linha): todas entram em paralelo.
 - Escreva qualquer texto que não seja link e ele vira uma **nota**. A primeira
   linha vira o título, o resto vira o corpo.
+- Cole um punhado de **hexadecimais** — `#264653 #2a9d8f #e9c46a`, separados por
+  espaço, vírgula ou quebra de linha — e eles viram uma **paleta**, com as cores
+  como capa do card. Dentro dela dá pra trocar cada cor pelo seletor do sistema,
+  copiar o hex com um clique e acrescentar novas.
 - Arraste imagens e prints pra qualquer lugar da janela, ou cole com `Ctrl/⌘ V`
   direto na página. As imagens são comprimidas para WebP antes de guardar.
 - `Ctrl/⌘ V` com um link na área de transferência salva sem nem clicar no campo.
@@ -45,13 +49,21 @@ o que muda em relação à versão completa.
 - Favoritos, "Sem board" (o que ainda não foi organizado) e "Vistos
   recentemente".
 
+**Ver**
+
+- Todo card de site ganha uma **capa**. Quando o site publica uma `og:image`, é
+  ela que aparece; quando não publica, a capa é gerada aqui mesmo — uma placa
+  com o domínio real, no tom derivado dele. Nada de card cinza.
+- Paletas mostram as próprias cores como capa, em qualquer tamanho.
+
 **Encontrar**
 
 - `⌘K` / `Ctrl K` abre a busca de tudo: referências, boards, tags e ações, com
-  busca fuzzy — "dsn sys" acha "Design System". Sem digitar nada, ela mostra o
-  que você abriu por último.
-- Filtro dentro do recorte atual, por tipo (links / imagens / notas) e por
-  ordenação.
+  busca fuzzy — "dsn sys" acha "Design System". Paletas também são achadas pelo
+  **hexadecimal** (`#2a9d8f`) e pelo **nome da cor** ("turquesa"). Sem digitar
+  nada, ela mostra o que você abriu por último.
+- Filtro dentro do recorte atual, por tipo (links / imagens / notas / paletas) e
+  por ordenação.
 - Três leituras do acervo: **mural** (colunas com alturas naturais, pra passar
   o olho), **grade** (cards uniformes, pra comparar) e **lista** (densa, pra
   quando você já sabe o que procura).
@@ -76,6 +88,7 @@ o que muda em relação à versão completa.
 | `O` | Abrir o link original em nova aba |
 | `F` | Favoritar |
 | `Delete` | Excluir (com desfazer) |
+| `#d97757 …` | Colar hexadecimais na barra cria uma paleta |
 | `Esc` | Fechar o que estiver aberto |
 
 ---
@@ -92,7 +105,7 @@ Outros comandos:
 ```bash
 npm run build      # build de produção
 npm start          # sobe o build
-npm test           # testes do parser de metadados
+npm test           # testes do parser de metadados e das cores
 npm run typecheck  # tsc --noEmit
 ```
 

@@ -2,10 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Board, Item } from "@/lib/types";
-import { captureImages, captureLinks, captureNote, extractUrls } from "@/lib/capture";
+import {
+  captureImages,
+  captureLinks,
+  captureNote,
+  capturePalette,
+  extractUrls,
+  readPalette,
+} from "@/lib/capture";
 import { cx } from "@/lib/utils";
 import { toast } from "./Toast";
-import { ImageIcon, LinkIcon, NoteIcon, PlusIcon, SparkIcon } from "./Icons";
+import { ImageIcon, LinkIcon, NoteIcon, PaletteIcon, PlusIcon, SparkIcon } from "./Icons";
 
 /**
  * A porta de entrada do acervo. Cola uma URL e dá Enter: o resto vem sozinho.
@@ -39,9 +46,16 @@ export function CaptureBar({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
   }, [value]);
 
-  const urls = extractUrls(value);
-  const mode: "link" | "note" | "empty" =
-    value.trim() === "" ? "empty" : urls.length > 0 ? "link" : "note";
+  const palette = readPalette(value);
+  const urls = palette ? [] : extractUrls(value);
+  const mode: "link" | "note" | "palette" | "empty" =
+    value.trim() === ""
+      ? "empty"
+      : palette
+        ? "palette"
+        : urls.length > 0
+          ? "link"
+          : "note";
   const boardIds = boardId ? [boardId] : [];
 
   async function submit() {
@@ -55,7 +69,14 @@ export function CaptureBar({
     setValue("");
     setBusy(true);
     try {
-      if (urls.length > 0) {
+      if (palette) {
+        const saved = await capturePalette(palette, boardIds);
+        onCaptured([saved]);
+        toast(
+          palette.length === 1 ? "Cor salva" : `Paleta de ${palette.length} cores salva`,
+          { tone: "success" },
+        );
+      } else if (urls.length > 0) {
         const saved = await captureLinks(urls, boardIds);
         onCaptured(saved);
         toast(
@@ -111,6 +132,8 @@ export function CaptureBar({
         <span className="mt-2 ml-1 shrink-0 text-[var(--text-faint)]">
           {mode === "link" ? (
             <LinkIcon size={17} className="text-[var(--accent)]" />
+          ) : mode === "palette" ? (
+            <PaletteIcon size={17} className="text-[var(--accent)]" />
           ) : mode === "note" ? (
             <NoteIcon size={17} className="text-[var(--accent)]" />
           ) : (
@@ -134,10 +157,25 @@ export function CaptureBar({
               event.currentTarget.blur();
             }
           }}
-          placeholder="Cole um link, escreva uma ideia ou arraste uma imagem…"
+          placeholder="Cole um link, cores em hex, escreva uma ideia ou arraste uma imagem…"
           className="mt-1 max-h-44 min-w-0 flex-1 resize-none bg-transparent text-sm leading-relaxed text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
         />
       </div>
+
+      {/* Prévia das cores dentro da própria barra: dá pra conferir o que vai
+          ser salvo antes de apertar Enter. */}
+      {palette && (
+        <div className="flex shrink-0 gap-1 self-center">
+          {palette.map((color) => (
+            <span
+              key={color}
+              title={color.toUpperCase()}
+              className="h-6 w-8 rounded-md border border-[var(--border)]"
+              style={{ background: color }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* No mobile os controles vão para uma linha própria: com tudo na mesma
           faixa, o campo de texto some entre o seletor e o botão. */}
@@ -194,7 +232,11 @@ export function CaptureBar({
             </>
           ) : (
             <>
-              {urls.length > 1 ? `Salvar ${urls.length}` : "Salvar"}
+              {mode === "palette"
+                ? "Salvar paleta"
+                : urls.length > 1
+                  ? `Salvar ${urls.length}`
+                  : "Salvar"}
               <kbd className="hidden font-sans text-[10px] opacity-70 sm:inline">↵</kbd>
             </>
           )}

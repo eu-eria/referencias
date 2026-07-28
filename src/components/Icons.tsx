@@ -215,6 +215,15 @@ export const CheckIcon = (props: IconProps) => (
   </Icon>
 );
 
+export const PaletteIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M12 3.5a8.5 8.5 0 1 0 0 17c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9a4.2 4.2 0 0 0 4.2-4.2c0-4.1-3.8-7.4-8.5-7.4z" />
+    <circle cx="7.5" cy="11" r="1.2" />
+    <circle cx="10" cy="7.5" r="1.2" />
+    <circle cx="14.5" cy="7.8" r="1.2" />
+  </Icon>
+);
+
 export const KeyboardIcon = (props: IconProps) => (
   <Icon {...props}>
     <rect x="2.5" y="6" width="19" height="12" rx="2" />

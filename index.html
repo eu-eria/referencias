@@ -335,12 +335,23 @@
   .capture:focus-within { border-color: var(--border-strong); }
   .capture-icon { margin: 6px 0 0 4px; flex: none; color: var(--text-faint); display: grid; }
   .capture-icon[data-mode="link"], .capture-icon[data-mode="note"] { color: var(--accent); }
+  .capture-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
   #capture-input {
-    flex: 1; min-width: 0;
+    width: 100%;
     margin-top: 4px;
     max-height: 168px;
     border: 0; background: none; outline: none; resize: none;
     font-size: 14px; line-height: 1.6;
+  }
+  /* prévia das cores enquanto você digita, antes de salvar */
+  .capture-preview {
+    display: flex; gap: 4px; height: 22px;
+    padding-bottom: 2px;
+  }
+  .capture-preview > span {
+    flex: 0 0 34px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
   }
   #capture-input::placeholder { color: var(--text-faint); }
   .capture-actions { display: flex; align-items: center; gap: 6px; align-self: flex-end; flex: none; }
@@ -467,6 +478,40 @@
   .cover { position: relative; overflow: hidden; background: var(--bg-sunken); }
   .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .cover-fallback { display: grid; place-items: center; }
+
+  /* paleta: as próprias cores são a capa */
+  .cover-palette { display: flex; }
+  .cover-palette > span { flex: 1 1 0; min-width: 0; }
+  .cover-palette.compact > span { flex: 1 1 0; }
+
+  /* Prévia do site. Não é screenshot — é uma placa com o domínio real, no tom
+     derivado dele. Serve pro card ter capa e pro site ser reconhecido de
+     relance, sem depender de rede. */
+  .preview { display: flex; flex-direction: column; gap: 9px; padding: 10px; }
+  .preview-bar { display: flex; align-items: center; gap: 6px; flex: none; }
+  .preview-dots { display: flex; gap: 3px; flex: none; }
+  .preview-dots i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; opacity: 0.3; }
+  .preview-url {
+    flex: 1; min-width: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    line-height: 1.5;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .preview-body {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 7px;
+    padding: 4px 6px 8px;
+    min-height: 0;
+  }
+  .preview-word {
+    font-size: 24px; font-weight: 600; letter-spacing: -0.035em; line-height: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .preview-rule { height: 3px; width: 34px; border-radius: 999px; flex: none; }
   .cover-label {
     font-family: var(--mono);
     font-size: 10.5px;
@@ -691,6 +736,43 @@
   }
   .board-toggle:hover { background: var(--surface-hover); color: var(--text); }
   .board-toggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+
+  /* editor de paleta na gaveta */
+  .swatch-list { display: flex; flex-direction: column; gap: 6px; }
+  .swatch-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px; border-radius: 10px;
+    transition: background 0.12s;
+  }
+  .swatch-row:hover { background: var(--surface-hover); }
+  .swatch-chip {
+    width: 34px; height: 34px; flex: none;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .swatch-hex {
+    flex: 1; min-width: 0;
+    font-family: var(--mono); font-size: 12.5px;
+    text-align: left; text-transform: uppercase;
+  }
+  .swatch-hex:hover { color: var(--accent-text); }
+  .swatch-name { flex: none; font-size: 11px; color: var(--text-faint); }
+  .swatch-add { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .swatch-add input[type="color"] {
+    width: 34px; height: 34px; padding: 0;
+    border: 1px solid var(--border); border-radius: 9px; background: none;
+    cursor: pointer;
+  }
+  .swatch-add input[type="text"] {
+    flex: 1; min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 9px;
+    background: var(--bg-sunken);
+    outline: none;
+    font-family: var(--mono); font-size: 12.5px;
+  }
+  .swatch-add input[type="text"]:focus { border-color: var(--border-strong); }
 
   .related { display: flex; flex-direction: column; gap: 2px; }
   .related-row {
@@ -969,7 +1051,10 @@
 
       <div class="capture">
         <span class="capture-icon" id="capture-icon" data-mode="empty" aria-hidden="true"></span>
-        <textarea id="capture-input" rows="1" placeholder="Cole um link, escreva uma ideia ou arraste uma imagem…"></textarea>
+        <div class="capture-field">
+          <textarea id="capture-input" rows="1" placeholder="Cole um link, cores em hex, escreva uma ideia ou arraste uma imagem…"></textarea>
+          <div class="capture-preview hidden" id="capture-preview" aria-hidden="true"></div>
+        </div>
         <div class="capture-actions">
           <input type="file" id="file-input" accept="image/*" multiple hidden>
           <button class="icon-btn" id="upload-btn" aria-label="Enviar imagens" title="Enviar imagens">
@@ -1059,6 +1144,7 @@
     edit: '<path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/><path d="m14 7 3 3"/>',
     spark: '<path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9z"/><path d="M18.5 16.5 19.2 18.5 21 19.2 19.2 20 18.5 22 17.8 20 16 19.2 17.8 18.5z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/>',
+    palette: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9a4.2 4.2 0 0 0 4.2-4.2c0-4.1-3.8-7.4-8.5-7.4z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="14.5" cy="7.8" r="1.2"/>',
     download: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 18.5v.5A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-.5"/>',
     upload: '<path d="M12 20V9M7.5 13.5 12 9l4.5 4.5"/><path d="M4.5 6.5V6A1.5 1.5 0 0 1 6 4.5h12A1.5 1.5 0 0 1 19.5 6v.5"/>',
     mural: '<rect x="3.5" y="3.5" width="7" height="9" rx="1.4"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.4"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.4"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.4"/>',
@@ -1126,6 +1212,102 @@
     return value.toFixed(value < 10 ? 1 : 0) + " " + units[i];
   }
 
+  /* ═══════════════════════════ cores ══════════════════════════════ */
+
+  const HEX_TOKEN = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+  function normalizeHex(raw) {
+    const match = String(raw).trim().match(HEX_TOKEN);
+    if (!match) return null;
+    let hex = match[1].toLowerCase();
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    return "#" + hex;
+  }
+
+  /**
+   * Reconhece um texto que é só cores: "#d97757 #c9a227", uma por linha,
+   * separadas por vírgula, com ou sem "#". Devolve null se qualquer pedaço
+   * não for cor — assim uma nota comum nunca vira paleta por engano.
+   */
+  function parsePalette(text) {
+    const tokens = String(text).split(/[\s,;|]+/).filter(Boolean);
+    if (!tokens.length || tokens.length > 24) return null;
+
+    const colors = [];
+    for (const token of tokens) {
+      const hex = normalizeHex(token);
+      if (!hex) return null;
+      if (!colors.includes(hex)) colors.push(hex);
+    }
+
+    // Uma cor só de 3 dígitos é ambígua demais (#abc parece uma tag), então
+    // exige forma completa quando é a única.
+    if (colors.length === 1 && !/^#?[0-9a-f]{6}$/i.test(tokens[0].replace(/^#/, ""))) {
+      return null;
+    }
+    return colors;
+  }
+
+  function hexToRgb(hex) {
+    const value = normalizeHex(hex) || "#000000";
+    return {
+      r: parseInt(value.slice(1, 3), 16),
+      g: parseInt(value.slice(3, 5), 16),
+      b: parseInt(value.slice(5, 7), 16),
+    };
+  }
+
+  function hexToHsl(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const [rn, gn, bn] = [r / 255, g / 255, b / 255];
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    const l = (max + min) / 2;
+    if (max === min) return { h: 0, s: 0, l };
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+    else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+    else h = ((rn - gn) / d + 4) / 6;
+    return { h: h * 360, s, l };
+  }
+
+  const HUE_NAMES = [
+    // 12° e não 15°: terracota (#d97757) cai em 14,8° e lê como laranja.
+    [12, "vermelho"], [45, "laranja"], [70, "amarelo"], [160, "verde"],
+    [200, "turquesa"], [250, "azul"], [290, "violeta"], [335, "rosa"], [361, "vermelho"],
+  ];
+
+  function colorName(hex) {
+    const { h, s, l } = hexToHsl(hex);
+    if (l < 0.08) return "preto";
+    if (l > 0.94 && s < 0.1) return "branco";
+    if (s < 0.12) return "cinza";
+    const base = HUE_NAMES.find(([limit]) => h < limit)[1];
+    if (l < 0.28) return base + " escuro";
+    if (l > 0.75) return base + " claro";
+    return base;
+  }
+
+  /** Preto ou branco por cima do swatch, o que tiver mais contraste. */
+  function readableOn(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    // luminância relativa, como na fórmula de contraste da WCAG
+    const channel = (c) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+    return luminance > 0.42 ? "#101014" : "#ffffff";
+  }
+
+  function paletteTitle(colors) {
+    const name = colorName(colors[0]);
+    return colors.length === 1
+      ? "Cor " + name
+      : `Paleta ${name} · ${colors.length} cores`;
+  }
+
   function colorFromString(value) {
     let hash = 0;
     for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) | 0;
@@ -1176,6 +1358,12 @@
       }
       const host = hostOf(item.url);
       if (host) { const hit = fuzzy(trimmed, host); if (hit) score = Math.max(score, hit * 1.8); }
+      // paleta é procurada pelo próprio hex e pelo nome da cor
+      for (const color of item.colors || []) {
+        if (color.includes(deaccent(trimmed).replace(/^#?/, "#"))) score = Math.max(score, 110);
+        const named = fuzzy(trimmed, colorName(color));
+        if (named) score = Math.max(score, named * 1.6);
+      }
       const long = ((item.description || "") + " " + (item.notes || "")).trim();
       if (long && deaccent(long).includes(deaccent(trimmed))) score = Math.max(score, 70);
       if (score > 0) scored.push({ item, score });
@@ -1316,7 +1504,7 @@
 
   const BOARD_COLORS = ["#d97757", "#c9a227", "#5b9279", "#4a86c5", "#8a6fc4", "#c4699a", "#7d8a99"];
   const BOARD_EMOJIS = ["🎨","💡","📐","🧩","🖼️","✍️","🎬","🎧","📊","🧪","🚀","🏷️","🧠","📦","🌱","⚡","🔭","🗂️","🪄","🧭"];
-  const KIND_LABEL = { link: "Links", image: "Imagens", note: "Notas" };
+  const KIND_LABEL = { link: "Links", image: "Imagens", note: "Notas", palette: "Paletas" };
   const SORT_LABEL = { recentes: "Mais recentes", antigos: "Mais antigos", titulo: "Título (A–Z)", abertos: "Abertos por último" };
 
   const blobUrls = new Map();
@@ -1466,6 +1654,13 @@
 Referência mental: calculadoras de preço de infra. Menos escolha, mais resposta.` },
   ];
 
+  const SEED_PALETTES = [
+    { board: 2, colors: ["#0b0b0d", "#17171b", "#d97757", "#f2f2f3", "#9b9ba5"],
+      title: "Paleta desta plataforma" },
+    { board: 2, colors: ["#1d3557", "#457b9d", "#a8dadc", "#f1faee", "#e63946"],
+      title: "Paleta azul e coral" },
+  ];
+
   // Estudos de cor gerados no canvas — as capas dos links dependeriam de rede,
   // então o mural ganha imagens reais por outro caminho.
   const SEED_STUDIES = [
@@ -1526,6 +1721,16 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
         id: "seed-note-" + i, kind: "note", title: note.title, description: note.body,
         boardIds: [boards[note.board].id], tags: note.tags,
         favorite: i === 0, createdAt, updatedAt: createdAt,
+      });
+    });
+
+    SEED_PALETTES.forEach((palette, i) => {
+      const createdAt = now - (i + 1) * hour * 7;
+      items.push({
+        id: "seed-palette-" + i, kind: "palette", title: palette.title,
+        colors: palette.colors,
+        boardIds: [boards[palette.board].id], tags: ["cor", "paleta"],
+        favorite: false, createdAt, updatedAt: createdAt,
       });
     });
 
@@ -1651,6 +1856,17 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     }
 
     const base = colorFromString(hostOf(item.url) || item.title || item.id);
+
+    // As cores da paleta são a própria capa, em qualquer tamanho.
+    if (item.kind === "palette" && (item.colors || []).length) {
+      box.classList.add("cover-palette");
+      if (compact) box.classList.add("compact");
+      else if (aspect === "auto") box.style.aspectRatio = "5 / 2";
+      item.colors.forEach((color) =>
+        box.append(el("span", { style: "background:" + color, title: color.toUpperCase() })));
+      return box;
+    }
+
     box.classList.add("cover-fallback");
 
     if (compact) {
@@ -1668,22 +1884,68 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
       return box;
     }
 
-    if (aspect === "auto") box.style.aspectRatio = "5 / 2";
-
     if (item.kind === "note") {
+      if (aspect === "auto") box.style.aspectRatio = "5 / 2";
       box.style.background = `linear-gradient(150deg, ${base}22, ${base}0d 60%, transparent)`;
       const icon = svg(ICON.note, 24);
       icon.style.color = "var(--text-faint)";
       box.append(icon);
-    } else {
-      box.style.background =
-        `radial-gradient(120% 100% at 20% 0%, ${base}40, ${base}14 45%, var(--bg-sunken) 100%)`;
-      box.append(el("span", {
-        class: "cover-label", style: `color:${base}`,
-        text: (hostOf(item.url) || item.title || "referência").slice(0, 28),
-      }));
+      return box;
     }
+
+    const host = hostOf(item.url);
+    if (host) {
+      box.classList.remove("cover-fallback");
+      box.classList.add("preview");
+      if (aspect === "auto") box.style.aspectRatio = "16 / 10";
+      box.style.background =
+        `linear-gradient(160deg, ${base}2e, ${base}12 45%, var(--bg-sunken) 100%)`;
+
+      // Nome longo encolhe em vez de truncar: "marketingexamples" tem de
+      // caber inteiro, senão a capa deixa de identificar o site.
+      const word = siteWord(host);
+      const size = word.length > 15 ? 15 : word.length > 11 ? 19 : 24;
+
+      box.append(
+        el("div", { class: "preview-bar", style: `color:${base}` }, [
+          el("span", { class: "preview-dots" }, [el("i"), el("i"), el("i")]),
+          el("span", {
+            class: "preview-url",
+            style: `background:${base}1f;color:${base}`,
+            text: host,
+          }),
+        ]),
+        el("div", { class: "preview-body" }, [
+          el("span", {
+            class: "preview-word",
+            style: `color:${base};font-size:${size}px`,
+            text: word,
+          }),
+          el("span", { class: "preview-rule", style: `background:${base};opacity:.55` }),
+        ]),
+      );
+      return box;
+    }
+
+    if (aspect === "auto") box.style.aspectRatio = "5 / 2";
+    box.style.background =
+      `radial-gradient(120% 100% at 20% 0%, ${base}40, ${base}14 45%, var(--bg-sunken) 100%)`;
+    box.append(el("span", {
+      class: "cover-label", style: `color:${base}`,
+      text: (item.title || "referência").slice(0, 28),
+    }));
     return box;
+  }
+
+  /** "www.refactoringui.com" → "refactoringui" — o nome que identifica o site. */
+  function siteWord(host) {
+    const parts = host.split(".").filter(Boolean);
+    // domínios como "site.com.br" têm o nome na antepenúltima posição
+    const generic = new Set(["com", "co", "net", "org", "gov", "edu", "io", "app", "dev", "br", "website"]);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!generic.has(parts[i])) return parts[i];
+    }
+    return parts[0] || host;
   }
 
   /* ═════════════════════════ render: rail ═════════════════════════ */
@@ -1872,7 +2134,10 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
               : null,
           ]),
           el("p", { class: "row-sub", style: "margin:2px 0 0",
-            text: item.description || hostOf(item.url) || (item.kind === "note" ? "Nota" : "Imagem") }),
+            text: item.description || hostOf(item.url) ||
+              (item.kind === "note" ? "Nota"
+                : item.kind === "palette" ? (item.colors || []).join("  ").toUpperCase()
+                : "Imagem") }),
         ]),
         el("div", { class: "tags" }, item.tags.slice(0, 3).map(tagChip)),
         el("time", { text: timeAgo(item.createdAt) }),
@@ -1925,6 +2190,11 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     const meta = el("div", { class: "card-meta" });
     if (item.kind === "note") { meta.append(svg(ICON.note, 12), el("span", { text: "Nota" })); }
     else if (item.kind === "image") { meta.append(svg(ICON.image, 12), el("span", { text: "Imagem" })); }
+    else if (item.kind === "palette") {
+      const count = (item.colors || []).length;
+      meta.append(svg(ICON.palette, 12),
+        el("span", { text: count === 1 ? "1 cor" : count + " cores" }));
+    }
     else { meta.append(el("span", { class: "host", text: hostOf(item.url) || "referência" })); }
     meta.append(el("span", { "aria-hidden": "true", text: "·" }),
       el("time", { text: timeAgo(item.createdAt) }));
@@ -1978,7 +2248,7 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
       action = { label: "Limpar filtros", run: clearFilters };
     } else if (!state.items.length) {
       title = "Seu acervo começa aqui";
-      body = "Cole um link na barra de cima, escreva uma ideia ou arraste uma imagem pra dentro da janela.";
+      body = "Cole um link ou um punhado de hexadecimais na barra de cima, escreva uma ideia ou arraste uma imagem pra dentro da janela.";
       action = { label: "Adicionar a primeira referência", run: focusCapture };
     } else if (sel === "board") {
       title = "Board vazio por enquanto";
@@ -2086,7 +2356,7 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     ]));
 
     const body = el("div", { class: "drawer-body" });
-    if (item.imageBlob) {
+    if (item.imageBlob || item.kind === "palette" || hostOf(item.url)) {
       const box = cover(item, { aspect: "auto" });
       box.classList.add("drawer-cover");
       body.append(box);
@@ -2145,6 +2415,78 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     content.append(el("section", {}, [
       el("span", { class: "field-label", text: "Suas anotações" }), notes,
     ]));
+
+    if (item.kind === "palette") {
+      const colors = item.colors || [];
+      const list = el("div", { class: "swatch-list" });
+
+      const copy = async (value, node, done) => {
+        try {
+          await navigator.clipboard.writeText(value);
+          const original = node.textContent;
+          node.textContent = done;
+          setTimeout(() => { node.textContent = original; }, 1200);
+        } catch {
+          toast("Não consegui copiar — o navegador bloqueou", { tone: "error" });
+        }
+      };
+
+      colors.forEach((color, index) => {
+        // O input de cor fica por cima do swatch: clicar abre o seletor nativo
+        // e trocar o valor edita a cor no lugar.
+        const picker = el("input", { type: "color", value: color, "aria-label": "Editar " + color,
+          style: "position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0;padding:0" });
+        picker.addEventListener("change", () => {
+          const next = colors.slice();
+          next[index] = normalizeHex(picker.value) || color;
+          updateItem(item.id, { colors: next }).then(afterEdit);
+        });
+
+        const chip = el("span", { class: "swatch-chip", style: "background:" + color + ";position:relative" });
+        chip.append(picker);
+
+        const hex = el("button", { class: "swatch-hex", text: color });
+        hex.addEventListener("click", () => copy(color, hex, "copiado!"));
+
+        list.append(el("div", { class: "swatch-row" }, [
+          chip, hex,
+          el("span", { class: "swatch-name", text: colorName(color) }),
+          el("button", {
+            class: "icon-btn", "aria-label": "Remover " + color,
+            onclick: () => updateItem(item.id, { colors: colors.filter((_, i) => i !== index) }).then(afterEdit),
+            html: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ICON.close}</svg>`,
+          }),
+        ]));
+      });
+
+      const newColor = el("input", { type: "color", value: "#d97757", "aria-label": "Escolher cor" });
+      const newHex = el("input", { type: "text", placeholder: "#rrggbb ou cole várias de uma vez" });
+      const addColors = () => {
+        const parsed = parsePalette(newHex.value) || (normalizeHex(newHex.value) ? [normalizeHex(newHex.value)] : null);
+        const toAdd = parsed || [normalizeHex(newColor.value)].filter(Boolean);
+        const next = colors.slice();
+        toAdd.forEach((color) => { if (color && !next.includes(color)) next.push(color); });
+        newHex.value = "";
+        if (next.length !== colors.length) updateItem(item.id, { colors: next }).then(afterEdit);
+      };
+      newHex.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") { event.preventDefault(); addColors(); }
+      });
+      newColor.addEventListener("change", addColors);
+
+      const copyAll = el("button", { class: "btn btn-ghost", text: "Copiar todas" });
+      copyAll.addEventListener("click", () => copy(colors.join(" "), copyAll, "Copiado!"));
+
+      content.append(el("section", {}, [
+        el("span", { class: "field-label", text: "Cores" }),
+        list,
+        el("div", { class: "swatch-add" }, [
+          newColor, newHex,
+          el("button", { class: "btn btn-ghost", text: "Adicionar", onclick: addColors }),
+        ]),
+        el("div", { style: "margin-top:10px" }, [copyAll]),
+      ]));
+    }
 
     const tagBox = el("div", { class: "tag-editor" });
     item.tags.forEach((tag) => {
@@ -2478,7 +2820,9 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
       ]],
       ["Capturando", [
         ["Enter", "Salvar o que está na barra"], ["Shift Enter", "Quebrar linha na nota"],
-        [modKey() + "V", "Colar link ou print direto na página"], ["Arrastar", "Soltar imagens na janela"],
+        ["#d97757 …", "Colar hexadecimais cria uma paleta"],
+        [modKey() + "V", "Colar link, cores ou print direto na página"],
+        ["Arrastar", "Soltar imagens na janela"],
       ]],
     ];
 
@@ -2641,6 +2985,14 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
           el("p", { text: "Tudo que você salvar aqui fica no IndexedDB deste navegador, incluindo as imagens. Nada é enviado para lugar nenhum — e por isso limpar os dados do navegador apaga o acervo. Use Exportar em Ajustes para guardar uma cópia." }),
         ]),
         el("section", { class: "section" }, [
+          el("h3", { text: "Paletas de cor" }),
+          el("p", { text: "Cole um ou mais hexadecimais na barra de captura — separados por espaço, vírgula ou quebra de linha — e eles viram uma paleta. Dentro dela dá pra editar cada cor, copiar o hex com um clique e adicionar novas." }),
+        ]),
+        el("section", { class: "section" }, [
+          el("h3", { text: "A capa dos links" }),
+          el("p", { text: "Cada site ganha uma capa gerada aqui mesmo, com o domínio real no tom derivado dele. Não é uma foto da página: sem servidor o navegador não consegue buscar a imagem de capa de outro domínio. Na versão completa, quando o site publica uma og:image, é ela que aparece." }),
+        ]),
+        el("section", { class: "section" }, [
           el("h3", { text: "O que muda em relação à versão completa" }),
           el("p", { text: "Esta página não tem servidor, então duas coisas ficam de fora: a busca automática de título e capa dos links (o título vem da própria URL e você edita se quiser), e a sincronização entre dispositivos por conta de login." }),
           el("p", { class: "fine", text: "O resto — captura, boards, tags, busca ⌘K, anotações, relacionadas, atalhos, backup — é a mesma coisa." }),
@@ -2749,6 +3101,16 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     }));
   }
 
+  async function savePalette(colors, boardIds) {
+    return createItem({
+      kind: "palette",
+      title: paletteTitle(colors),
+      colors,
+      boardIds,
+      tags: ["cor", "paleta"],
+    });
+  }
+
   async function saveNote(text, boardIds) {
     const trimmed = text.trim();
     if (!trimmed) throw new Error("A nota está vazia");
@@ -2802,14 +3164,20 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
     const text = input.value.trim();
     if (!text) return;
 
-    const urls = extractUrls(text);
+    const palette = parsePalette(text);
+    const urls = palette ? [] : extractUrls(text);
     // O campo esvazia na hora e segue habilitado: já dá pra colar o próximo.
     input.value = "";
     growCapture();
     updateCaptureMode();
 
     try {
-      if (urls.length) {
+      if (palette) {
+        const saved = await savePalette(palette, targetBoards());
+        state.focusedId = saved.id;
+        toast(palette.length === 1 ? "Cor salva" : `Paleta de ${palette.length} cores salva`,
+          { tone: "success" });
+      } else if (urls.length) {
         const saved = await saveLinks(urls, targetBoards());
         state.focusedId = saved[0].id;
         toast(saved.length > 1 ? `${saved.length} links salvos` : `“${saved[0].title.slice(0, 42)}” salvo`,
@@ -2852,19 +3220,34 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
   function updateCaptureMode() {
     const input = $("capture-input");
     const value = input.value.trim();
-    const urls = extractUrls(value);
-    const mode = !value ? "empty" : urls.length ? "link" : "note";
+    const palette = parsePalette(value);
+    const urls = palette ? [] : extractUrls(value);
+    const mode = !value ? "empty" : palette ? "palette" : urls.length ? "link" : "note";
 
     const icon = $("capture-icon");
     icon.dataset.mode = mode;
     icon.innerHTML =
       `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${
-        mode === "link" ? ICON.link : mode === "note" ? ICON.note : ICON.plus}</svg>`;
+        mode === "link" ? ICON.link
+          : mode === "palette" ? ICON.palette
+          : mode === "note" ? ICON.note
+          : ICON.plus}</svg>`;
+
+    // Prévia das cores dentro da própria barra, pra confirmar o que vai salvar
+    // antes de apertar Enter.
+    const preview = $("capture-preview");
+    preview.replaceChildren();
+    preview.classList.toggle("hidden", !palette);
+    if (palette) {
+      palette.forEach((color) =>
+        preview.append(el("span", { style: "background:" + color, title: color.toUpperCase() })));
+    }
 
     const button = $("save-btn");
     button.disabled = mode === "empty";
     button.replaceChildren(
-      document.createTextNode(urls.length > 1 ? `Salvar ${urls.length}` : "Salvar"),
+      document.createTextNode(
+        mode === "palette" ? "Salvar paleta" : urls.length > 1 ? `Salvar ${urls.length}` : "Salvar"),
       el("kbd", { text: "↵", style: "border-color:currentColor;opacity:.7" }),
     );
   }
@@ -3129,6 +3512,18 @@ Referência mental: calculadoras de preço de infra. Menos escolha, mais respost
       const text = event.clipboardData && event.clipboardData.getData("text/plain");
       if (!text) return;
       const trimmed = text.trim();
+
+      const palette = parsePalette(trimmed);
+      if (palette) {
+        event.preventDefault();
+        const saved = await savePalette(palette, targetBoards());
+        state.focusedId = saved.id;
+        renderRail(); renderGrid();
+        toast(palette.length === 1 ? "Cor salva" : `Paleta de ${palette.length} cores salva`,
+          { tone: "success" });
+        return;
+      }
+
       const looksLikeUrl = /^https?:\/\//i.test(trimmed) ||
         /^[\w-]+(\.[\w-]+)+([/?#].*)?$/.test(trimmed);
       if (!looksLikeUrl || /\s/.test(trimmed)) return;

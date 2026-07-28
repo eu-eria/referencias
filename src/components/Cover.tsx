@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Item } from "@/lib/types";
 import { useBlobUrl } from "@/lib/hooks";
 import { colorFromString, cx, hostOf } from "@/lib/utils";
+import { siteWord } from "@/lib/color";
 import { NoteIcon } from "./Icons";
 
 /**
@@ -45,6 +46,25 @@ export function Cover({
           ? "aspect-[16/7]"
           : undefined;
 
+  // As cores da paleta são a própria capa, em qualquer tamanho.
+  if (item.kind === "palette" && (item.colors?.length ?? 0) > 0) {
+    return (
+      <div
+        className={cx("flex overflow-hidden", aspectClass, className)}
+        style={aspect === "auto" ? { aspectRatio: "5 / 2" } : undefined}
+      >
+        {item.colors!.map((color) => (
+          <span
+            key={color}
+            className="min-w-0 flex-1"
+            style={{ background: color }}
+            title={color.toUpperCase()}
+          />
+        ))}
+      </div>
+    );
+  }
+
   if (!source) {
     return (
       <Placeholder
@@ -52,8 +72,13 @@ export function Cover({
         seed={seed}
         compact={compact}
         // Sem capa de verdade, um bloco baixo e largo lê como cabeçalho do
-        // card em vez de um buraco no meio do mural.
-        className={cx(aspectClass ?? "aspect-[5/2]", className)}
+        // card em vez de um buraco no meio do mural. A prévia de site é mais
+        // alta porque tem conteúdo dentro.
+        className={cx(
+          aspectClass ??
+            (item.kind !== "note" && hostOf(item.url) ? "aspect-[16/10]" : "aspect-[5/2]"),
+          className,
+        )}
       />
     );
   }
@@ -119,6 +144,52 @@ function Placeholder({
             {label.charAt(0)}
           </span>
         )}
+      </div>
+    );
+  }
+
+  // Site sem og:image ganha uma capa gerada aqui: uma placa com o domínio
+  // real, no tom derivado dele. Não é foto da página — é o que dá pro card
+  // ter capa e pro site ser reconhecido de relance.
+  const host = hostOf(item.url);
+  if (item.kind !== "note" && host) {
+    const word = siteWord(host);
+    const size = word.length > 15 ? 15 : word.length > 11 ? 19 : 24;
+    return (
+      <div
+        className={cx("flex flex-col gap-2 overflow-hidden p-2.5", className)}
+        style={{
+          background: `linear-gradient(160deg, ${base}2e, ${base}12 45%, var(--bg-sunken) 100%)`,
+        }}
+      >
+        <div className="flex items-center gap-1.5" style={{ color: base }}>
+          <span className="flex shrink-0 gap-[3px]">
+            {[0, 1, 2].map((dot) => (
+              <i
+                key={dot}
+                className="h-[5px] w-[5px] rounded-full bg-current opacity-30"
+              />
+            ))}
+          </span>
+          <span
+            className="min-w-0 flex-1 truncate rounded-full px-2 py-[3px] font-mono text-[9.5px] leading-relaxed"
+            style={{ background: `${base}1f`, color: base }}
+          >
+            {host}
+          </span>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 px-1.5 pb-2">
+          <span
+            className="truncate font-semibold tracking-[-0.035em]"
+            style={{ color: base, fontSize: size, lineHeight: 1 }}
+          >
+            {word}
+          </span>
+          <span
+            className="h-[3px] w-[34px] shrink-0 rounded-full opacity-55"
+            style={{ background: base }}
+          />
+        </div>
       </div>
     );
   }

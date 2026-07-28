@@ -4,7 +4,7 @@ import { memo } from "react";
 import type { Board, Item, ViewMode } from "@/lib/types";
 import { cx, hostOf, timeAgo } from "@/lib/utils";
 import { Cover } from "./Cover";
-import { ArrowUpRightIcon, NoteIcon, StarIcon } from "./Icons";
+import { ArrowUpRightIcon, NoteIcon, PaletteIcon, StarIcon } from "./Icons";
 
 export interface ItemCardProps {
   item: Item;
@@ -78,7 +78,11 @@ function ItemCardBase({
             )}
           </div>
           <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-            {item.description || host || "Nota"}
+            {item.description ||
+              host ||
+              (item.kind === "palette"
+                ? item.colors?.join("  ").toUpperCase()
+                : "Nota")}
           </p>
         </div>
         <div className={cx("hidden shrink-0 items-center gap-1.5 md:flex", ABOVE_OVERLAY)}>
@@ -193,6 +197,13 @@ function ItemCardBase({
             <>
               <NoteIcon size={12} />
               <span>Nota</span>
+            </>
+          ) : item.kind === "palette" ? (
+            <>
+              <PaletteIcon size={12} />
+              <span>
+                {item.colors?.length === 1 ? "1 cor" : `${item.colors?.length ?? 0} cores`}
+              </span>
             </>
           ) : (
             <>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Board, Item } from "@/lib/types";
 import { relatedItems } from "@/lib/view";
 import { cx, formatDate, hostOf, slugifyTag } from "@/lib/utils";
+import { colorName, normalizeHex, parsePalette } from "@/lib/color";
 import { isTypingTarget, useScrollLock } from "@/lib/hooks";
 import { Cover } from "./Cover";
 import { toast } from "./Toast";
@@ -199,7 +200,11 @@ export function DetailDrawer({
         </header>
 
         <div ref={panelRef} className="min-h-0 flex-1 overflow-y-auto">
-          {(item.imageBlob || item.imageUrl || item.kind === "image") && (
+          {(item.imageBlob ||
+            item.imageUrl ||
+            item.kind === "image" ||
+            item.kind === "palette" ||
+            hostOf(item.url)) && (
             <Cover item={item} eager aspect="auto" className="w-full" />
           )}
 
@@ -274,6 +279,13 @@ export function DetailDrawer({
                 className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--bg-sunken)] px-3 py-2 text-[13px] leading-relaxed text-[var(--text)] outline-none transition placeholder:text-[var(--text-faint)] focus:border-[var(--border-strong)]"
               />
             </Field>
+
+            {item.kind === "palette" && (
+              <PaletteEditor
+                colors={item.colors ?? []}
+                onChange={(colors) => onUpdate(item.id, { colors })}
+              />
+            )}
 
             <Field label="Tags">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -393,6 +405,133 @@ export function DetailDrawer({
         </div>
       </aside>
     </>
+  );
+}
+
+/** Lista editável de cores: trocar, copiar, remover e acrescentar. */
+function PaletteEditor({
+  colors,
+  onChange,
+}: {
+  colors: string[];
+  onChange: (colors: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function copy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(value);
+      setTimeout(() => setCopied(null), 1400);
+    } catch {
+      toast("Não consegui copiar — o navegador bloqueou", { tone: "error" });
+    }
+  }
+
+  function add() {
+    // Aceita tanto uma cor quanto um punhado colado de uma vez.
+    const parsed = parsePalette(draft) ?? (normalizeHex(draft) ? [normalizeHex(draft)!] : null);
+    setDraft("");
+    if (!parsed) return;
+    const next = [...colors];
+    for (const color of parsed) if (!next.includes(color)) next.push(color);
+    if (next.length !== colors.length) onChange(next);
+  }
+
+  return (
+    <Field label="Cores">
+      <div className="flex flex-col gap-1.5">
+        {colors.map((color, index) => (
+          <div
+            key={`${color}-${index}`}
+            className="flex items-center gap-2.5 rounded-lg p-1.5 transition hover:bg-[var(--surface-hover)]"
+          >
+            <span
+              className="relative h-8 w-8 shrink-0 rounded-lg border border-[var(--border)]"
+              style={{ background: color }}
+            >
+              {/* O seletor nativo fica invisível por cima do swatch: clicar
+                  abre a paleta do sistema e editar troca a cor no lugar. */}
+              <input
+                type="color"
+                value={color}
+                aria-label={`Editar ${color}`}
+                onChange={(event) => {
+                  const next = [...colors];
+                  next[index] = normalizeHex(event.target.value) ?? color;
+                  onChange(next);
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </span>
+
+            <button
+              type="button"
+              onClick={() => void copy(color)}
+              className="min-w-0 flex-1 text-left font-mono text-[12.5px] uppercase transition hover:text-[var(--accent-text)]"
+            >
+              {copied === color ? "copiado!" : color}
+            </button>
+
+            <span className="shrink-0 text-[11px] text-[var(--text-faint)]">
+              {colorName(color)}
+            </span>
+
+            <button
+              type="button"
+              aria-label={`Remover ${color}`}
+              onClick={() => onChange(colors.filter((_, i) => i !== index))}
+              className="shrink-0 rounded-md p-1 text-[var(--text-faint)] transition hover:text-red-400"
+            >
+              <CloseIcon size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          type="color"
+          aria-label="Escolher cor"
+          defaultValue="#d97757"
+          onChange={(event) => {
+            const color = normalizeHex(event.target.value);
+            if (color && !colors.includes(color)) onChange([...colors, color]);
+          }}
+          className="h-8 w-8 shrink-0 cursor-pointer rounded-lg border border-[var(--border)] bg-transparent p-0"
+        />
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add();
+            }
+          }}
+          placeholder="#rrggbb ou cole várias de uma vez"
+          className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-sunken)] px-2.5 py-2 font-mono text-[12.5px] outline-none transition focus:border-[var(--border-strong)]"
+        />
+        <button
+          type="button"
+          onClick={add}
+          className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-2 text-[13px] font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+        >
+          Adicionar
+        </button>
+      </div>
+
+      {colors.length > 1 && (
+        <button
+          type="button"
+          onClick={() => void copy(colors.join(" "))}
+          className="mt-2.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[13px] font-medium text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+        >
+          {copied === colors.join(" ") ? "Copiado!" : "Copiar todas"}
+        </button>
+      )}
+    </Field>
   );
 }
 

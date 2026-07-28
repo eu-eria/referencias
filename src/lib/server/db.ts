@@ -234,6 +234,7 @@ async function migrate(db: Db) {
        accent_color   text,
        board_ids      text NOT NULL DEFAULT '[]',
        tags           text NOT NULL DEFAULT '[]',
+       colors         text NOT NULL DEFAULT '[]',
        notes          text,
        favorite       boolean NOT NULL DEFAULT false,
        created_at     bigint NOT NULL,
@@ -258,6 +259,22 @@ async function migrate(db: Db) {
 
   for (const statement of statements) {
     await db.execute(statement);
+  }
+
+  // Colunas acrescentadas depois da primeira versão. `CREATE TABLE IF NOT
+  // EXISTS` não altera uma tabela que já existe, então cada uma é adicionada
+  // à parte — e a falha por "já existe" é justamente o caso normal.
+  await addColumn(db, "items", "colors", "text NOT NULL DEFAULT '[]'");
+}
+
+async function addColumn(db: Db, table: string, column: string, definition: string) {
+  try {
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    // Postgres: "column ... already exists" · SQLite: "duplicate column name"
+    if (message.includes("already exists") || message.includes("duplicate column")) return;
+    throw error;
   }
 }
 

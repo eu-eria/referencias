@@ -31,7 +31,8 @@ const GROUPS: { title: string; rows: [keys: string, label: string][] }[] = [
     rows: [
       ["Enter", "Salvar o que está na barra"],
       ["Shift Enter", "Quebrar linha na nota"],
-      ["Ctrl/⌘ V", "Colar link ou print direto na página"],
+      ["#d97757 …", "Colar hexadecimais cria uma paleta"],
+      ["Ctrl/⌘ V", "Colar link, cores ou print direto na página"],
       ["Arrastar", "Soltar imagens em qualquer lugar da janela"],
     ],
   },
